@@ -28,6 +28,13 @@ function getTotalVotes(candidates: CandidateWithVotes[]): number {
   return candidates.reduce((sum, candidate) => sum + candidate.votesCount, 0);
 }
 
+function isExpired(expiresAt: string | null, now = new Date()): boolean {
+  if (!expiresAt) return false;
+  const expires = new Date(expiresAt);
+  if (Number.isNaN(expires.getTime())) return false;
+  return expires.getTime() <= now.getTime();
+}
+
 export default async function RoomDetailPage({
   params,
 }: RoomDetailPageProps) {
@@ -39,6 +46,8 @@ export default async function RoomDetailPage({
   }
 
   const prettyExpiresAt = formatDateTime(detail.room.expiresAt);
+  const isClosed =
+    detail.room.status === "closed" || isExpired(detail.room.expiresAt);
   const hasCandidates = detail.candidates.length > 0;
   const totalVotes = getTotalVotes(detail.candidates);
 
@@ -68,6 +77,17 @@ export default async function RoomDetailPage({
               <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700">
                 <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
                 마감 시간 없음 · 자유 투표
+              </span>
+            )}
+            {isClosed ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700 ring-1 ring-rose-200 dark:bg-rose-900/25 dark:text-rose-200 dark:ring-rose-700/60">
+                <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                마감된 투표
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-900/25 dark:text-emerald-200 dark:ring-emerald-700/60">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                투표 진행 중
               </span>
             )}
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700">
@@ -123,6 +143,7 @@ export default async function RoomDetailPage({
             roomId={roomId}
             initialCandidates={detail.candidates}
             initialMyVoteCandidateId={detail.myVote?.candidateId ?? null}
+            isClosed={isClosed}
           />
         </section>
 
@@ -138,7 +159,7 @@ export default async function RoomDetailPage({
             </p>
           </div>
 
-          <AddCandidateForm roomId={roomId} />
+          <AddCandidateForm roomId={roomId} isClosed={isClosed} />
         </section>
       </div>
     </div>

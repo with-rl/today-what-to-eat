@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -30,7 +31,11 @@ export default function RootLayout({
         <div className="flex min-h-screen flex-col">
           <header className="border-b border-zinc-200 bg-white/70 px-4 py-3 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/80">
             <div className="mx-auto flex max-w-5xl items-center justify-between">
-              <div className="flex items-center gap-2">
+              <Link
+                href="/"
+                aria-label="홈으로 이동"
+                className="flex items-center gap-2 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-zinc-600 dark:focus-visible:ring-offset-zinc-950"
+              >
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-400 via-rose-400 to-fuchsia-500 text-sm font-semibold text-zinc-950 shadow-sm dark:text-zinc-900">
                   🍱
                 </span>
@@ -42,7 +47,7 @@ export default function RootLayout({
                     팀 점심 메뉴를 빠르게 정하는 투표 서비스
                   </span>
                 </div>
-              </div>
+              </Link>
               <nav className="hidden items-center gap-4 text-xs font-medium text-zinc-600 dark:text-zinc-300 sm:flex">
                 <span className="rounded-full bg-zinc-100 px-3 py-1 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-50">
                   1인 1표 메뉴 투표

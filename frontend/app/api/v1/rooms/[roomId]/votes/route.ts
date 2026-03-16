@@ -3,6 +3,13 @@ import { cookies } from "next/headers";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { Vote, VoteSummary, VoteSummaryCandidate } from "@/lib/types/domain";
 
+function isExpired(expiresAt: string | null, now = new Date()): boolean {
+  if (!expiresAt) return false;
+  const expires = new Date(expiresAt);
+  if (Number.isNaN(expires.getTime())) return false;
+  return expires.getTime() <= now.getTime();
+}
+
 interface CreateVoteRequestBody {
   candidateId?: string;
 }
@@ -59,6 +66,39 @@ export async function POST(
     }
 
     const supabase = getSupabaseServerClient();
+
+    const { data: roomRow, error: roomError } = await supabase
+      .from("vote_rooms")
+      .select("expires_at, status")
+      .eq("id", roomId)
+      .maybeSingle();
+
+    if (roomError) {
+      return NextResponse.json(
+        {
+          message:
+            "투표 방 상태를 확인하는 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.",
+        },
+        { status: 500 },
+      );
+    }
+
+    if (!roomRow) {
+      return NextResponse.json(
+        { message: "해당 투표 방을 찾을 수 없어요." },
+        { status: 404 },
+      );
+    }
+
+    if (
+      roomRow.status === "closed" ||
+      isExpired((roomRow.expires_at as string | null) ?? null)
+    ) {
+      return NextResponse.json(
+        { message: "이미 마감된 투표 방이라 투표할 수 없어요." },
+        { status: 409 },
+      );
+    }
 
     // 1인 1표: 기존 투표를 삭제한 뒤 새 투표를 삽입하는 방식으로 구현
     const { error: deleteError } = await supabase
@@ -167,7 +207,7 @@ export async function POST(
       },
       { status: 201 },
     );
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         message:

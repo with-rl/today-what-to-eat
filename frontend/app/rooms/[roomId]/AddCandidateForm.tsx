@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import type { MenuCandidate } from "@/lib/types/domain";
 
 interface AddCandidateFormProps {
   roomId: string;
   onCreated?: (candidate: MenuCandidate) => void;
+  isClosed?: boolean;
 }
 
 interface CreateCandidateResponse {
@@ -16,8 +16,8 @@ interface CreateCandidateResponse {
 export function AddCandidateForm({
   roomId,
   onCreated,
+  isClosed = false,
 }: AddCandidateFormProps) {
-  const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,6 +25,10 @@ export function AddCandidateForm({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (isClosed) {
+      return;
+    }
 
     const trimmedName = name.trim();
     if (!trimmedName) {
@@ -77,7 +81,7 @@ export function AddCandidateForm({
           );
         }
       }
-    } catch (error) {
+    } catch {
       setErrorMessage(
         "네트워크 오류가 발생했어요. 인터넷 연결을 확인한 뒤 다시 시도해주세요.",
       );
@@ -101,6 +105,7 @@ export function AddCandidateForm({
           placeholder="예: 초밥, 김치찌개, 회사 근처 A식당 정식"
           className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none ring-0 transition-colors duration-200 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:placeholder:text-slate-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-400"
           value={name}
+          disabled={isSubmitting || isClosed}
           onChange={(event) => setName(event.target.value)}
         />
       </div>
@@ -120,6 +125,7 @@ export function AddCandidateForm({
           placeholder="예: 회사 근처 B초밥집, 매운맛 조절 가능"
           className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none ring-0 transition-colors duration-200 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:placeholder:text-slate-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-400"
           value={description}
+          disabled={isSubmitting || isClosed}
           onChange={(event) => setDescription(event.target.value)}
         />
         <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -142,10 +148,12 @@ export function AddCandidateForm({
       <div className="flex items-center justify-end gap-3 pt-1">
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || isClosed}
           className="inline-flex cursor-pointer items-center justify-center rounded-full bg-indigo-600 px-5 py-2 text-xs font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:focus-visible:ring-indigo-400 dark:focus-visible:ring-offset-slate-950"
         >
-          {isSubmitting ? "메뉴 추가 중..." : "메뉴 후보 추가하기"}
+          {isSubmitting
+            ? "메뉴 추가 중..."
+            : "메뉴 후보 추가하기"}
         </button>
       </div>
     </form>

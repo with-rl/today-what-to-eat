@@ -22,6 +22,13 @@ function formatDateTime(iso: string | null): string | null {
   }).format(date);
 }
 
+function isExpired(expiresAt: string | null, now = new Date()): boolean {
+  if (!expiresAt) return false;
+  const expires = new Date(expiresAt);
+  if (Number.isNaN(expires.getTime())) return false;
+  return expires.getTime() <= now.getTime();
+}
+
 export default async function RoomResultPage({
   params,
 }: RoomResultPageProps) {
@@ -36,6 +43,9 @@ export default async function RoomResultPage({
   }
 
   const prettyExpiresAt = formatDateTime(detail.room.expiresAt);
+  const isClosed =
+    detail.room.status === "closed" || isExpired(detail.room.expiresAt);
+  const decidedAt = formatDateTime(result.decidedAt);
   const totalVotes = result.candidates.reduce(
     (sum, candidate) => sum + candidate.votesCount,
     0,
@@ -74,6 +84,17 @@ export default async function RoomResultPage({
                 현재 시점 기준 집계
               </span>
             )}
+            {isClosed ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700 ring-1 ring-rose-200 dark:bg-rose-900/25 dark:text-rose-200 dark:ring-rose-700/60">
+                <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                마감된 투표
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-900/25 dark:text-emerald-200 dark:ring-emerald-700/60">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                투표 진행 중
+              </span>
+            )}
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700">
               <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
               총 {totalVotes}표 집계
@@ -110,7 +131,7 @@ export default async function RoomResultPage({
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
-                  오늘의 메뉴
+                  {isClosed ? "최종 선택된 메뉴" : "현재 1등 메뉴"}
                 </p>
                 <p className="mt-1 text-lg font-semibold tracking-tight text-emerald-900 dark:text-emerald-50">
                   {result.winner.name}
@@ -120,10 +141,15 @@ export default async function RoomResultPage({
                     {result.winner.description}
                   </p>
                 ) : null}
+                {isClosed && decidedAt ? (
+                  <p className="mt-2 text-[11px] text-emerald-800/70 dark:text-emerald-100/70">
+                    {decidedAt} 확정
+                  </p>
+                ) : null}
               </div>
               <div className="mt-2 flex items-center gap-2 sm:mt-0">
                 <span className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-emerald-50 shadow-sm">
-                  {result.winner.votesCount}표로 선정
+                  {result.winner.votesCount}표
                 </span>
                 <span className="hidden text-[11px] text-emerald-800/80 sm:inline dark:text-emerald-100/80">
                   동점일 경우 먼저 제안된 메뉴가 선택돼요.
@@ -133,11 +159,12 @@ export default async function RoomResultPage({
           ) : (
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
-                아직 확정된 메뉴가 없어요
+                {isClosed ? "최종 메뉴를 결정할 수 없어요" : "아직 1등 메뉴가 없어요"}
               </p>
               <p className="mt-1 text-xs text-emerald-800/80 dark:text-emerald-100/80">
-                투표가 없거나 모든 메뉴의 득표수가 0표라서 오늘의 메뉴를
-                결정할 수 없어요. 조금 더 투표가 모이면 다시 확인해 주세요.
+                {isClosed
+                  ? "투표가 없거나 모든 메뉴의 득표수가 0표라서 최종 메뉴를 결정할 수 없어요."
+                  : "투표가 없거나 모든 메뉴의 득표수가 0표라서 현재 1등을 결정할 수 없어요. 조금 더 투표가 모이면 다시 확인해 주세요."}
               </p>
             </div>
           )}

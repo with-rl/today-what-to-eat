@@ -12,6 +12,7 @@ interface CandidatesSectionProps {
   roomId: string;
   initialCandidates: CandidateWithVotes[];
   initialMyVoteCandidateId: string | null;
+  isClosed: boolean;
 }
 
 interface CreateVoteResponse {
@@ -22,6 +23,7 @@ export function CandidatesSection({
   roomId,
   initialCandidates,
   initialMyVoteCandidateId,
+  isClosed,
 }: CandidatesSectionProps) {
   const [candidates, setCandidates] =
     useState<CandidateWithVotes[]>(initialCandidates);
@@ -88,6 +90,10 @@ export function CandidatesSection({
   };
 
   const handleVote = async (candidateId: string) => {
+    if (isClosed) {
+      return;
+    }
+
     setErrorMessage(null);
     setIsVoting(candidateId);
     try {
@@ -114,7 +120,7 @@ export function CandidatesSection({
       const data = (await response.json()) as CreateVoteResponse;
       applySummaryToCandidates(data.summary);
       setIsVoting(null);
-    } catch (error) {
+    } catch {
       setErrorMessage(
         "네트워크 오류가 발생했어요. 인터넷 연결을 확인한 뒤 다시 시도해주세요.",
       );
@@ -208,7 +214,7 @@ export function CandidatesSection({
                 <button
                   type="button"
                   onClick={() => handleVote(candidate.id)}
-                  disabled={isVoting !== null}
+                  disabled={isVoting !== null || isClosed}
                   className={`inline-flex cursor-pointer items-center justify-center rounded-full px-3 py-1.5 text-[11px] font-semibold shadow-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-950 ${
                     isMyVote
                       ? "bg-emerald-600 text-white hover:bg-emerald-500 focus-visible:ring-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:focus-visible:ring-emerald-400"

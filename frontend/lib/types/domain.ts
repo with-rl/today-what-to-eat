@@ -10,6 +10,8 @@ export interface VoteRoom {
   title: string;
   teamId: string | null;
   expiresAt: string | null;
+  status: "open" | "closed" | string;
+  closedAt: string | null;
   createdAt: string;
 }
 
@@ -74,6 +76,8 @@ export interface RoomResultCandidate {
 
 export interface RoomResult {
   roomId: UUID;
+  status: "open" | "closed" | string;
+  decidedAt: string | null;
   winner: RoomResultWinner | null;
   tieBreakRule: "earliest" | "random" | string;
   candidates: RoomResultCandidate[];

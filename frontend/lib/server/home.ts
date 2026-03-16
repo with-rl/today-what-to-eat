@@ -7,6 +7,8 @@ export interface LatestRoomSummary {
   title: string;
   teamId: string | null;
   expiresAt: string | null;
+  status: "open" | "closed" | string;
+  closedAt: string | null;
   createdAt: string;
   totalCandidates: number;
   totalParticipants: number;
@@ -14,6 +16,7 @@ export interface LatestRoomSummary {
 
 export interface LatestResultSummary {
   roomId: string;
+  teamId: string | null;
   decidedAt: string;
   menuName: string;
   votesCount: number;
@@ -58,9 +61,10 @@ export async function getHomeSummary(): Promise<HomeSummary> {
 
     const totalCandidates = candidateRows?.length ?? 0;
     const participantIds = new Set<string>();
-    (voteRows ?? []).forEach((row: any) => {
-      if (row.voter_id) {
-        participantIds.add(row.voter_id as string);
+    (voteRows ?? []).forEach((row) => {
+      const voterId = (row as { voter_id?: unknown } | null)?.voter_id;
+      if (typeof voterId === "string" && voterId.trim().length > 0) {
+        participantIds.add(voterId);
       }
     });
 
@@ -69,6 +73,8 @@ export async function getHomeSummary(): Promise<HomeSummary> {
       title: roomRow.title,
       teamId: roomRow.team_id,
       expiresAt: roomRow.expires_at,
+      status: roomRow.status ?? "open",
+      closedAt: roomRow.closed_at ?? null,
       createdAt: roomRow.created_at,
       totalCandidates,
       totalParticipants: participantIds.size,
@@ -79,7 +85,7 @@ export async function getHomeSummary(): Promise<HomeSummary> {
   const { data: historyRow, error: historyError } = await supabase
     .from("meal_history")
     .select(
-      "id, room_id, final_candidate_id, decided_at, menu_candidates(name)",
+      "id, room_id, final_candidate_id, decided_at, vote_rooms(team_id), menu_candidates(name)",
     )
     .order("decided_at", { ascending: false })
     .limit(1)
@@ -92,7 +98,7 @@ export async function getHomeSummary(): Promise<HomeSummary> {
   let latestResult: LatestResultSummary | null = null;
 
   if (historyRow) {
-    const { data: votesForWinner, error: votesError } = await supabase
+    const { count: votesCount, error: votesError } = await supabase
       .from("votes")
       .select("id", { count: "exact", head: true })
       .eq("room_id", historyRow.room_id)
@@ -104,9 +110,10 @@ export async function getHomeSummary(): Promise<HomeSummary> {
 
     latestResult = {
       roomId: historyRow.room_id,
+      teamId: historyRow.vote_rooms?.team_id ?? null,
       decidedAt: historyRow.decided_at,
       menuName: historyRow.menu_candidates?.name ?? "",
-      votesCount: votesForWinner?.length ?? 0,
+      votesCount: votesCount ?? 0,
     };
   }
 

@@ -17,10 +17,29 @@ function formatDate(iso: string): string {
   if (Number.isNaN(date.getTime())) return iso;
 
   return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(date);
+}
+
+function formatDateTime(iso: string | null): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function isExpired(expiresAt: string | null, now = new Date()): boolean {
+  if (!expiresAt) return false;
+  const expires = new Date(expiresAt);
+  if (Number.isNaN(expires.getTime())) return false;
+  return expires.getTime() <= now.getTime();
 }
 
 export default async function Home() {
@@ -46,11 +65,35 @@ export default async function Home() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-3">
-          {/* 오늘의 투표 카드 */}
+          {/* 최근 투표 카드 */}
           <div className="flex flex-col rounded-xl bg-sky-900/90 px-4 py-4 text-sky-50 shadow-md">
             <div className="mb-3 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-200">
-              <span>오늘의 투표</span>
-              <span>{latestRoom ? "LIVE" : "대기 중"}</span>
+              <span>최근 투표</span>
+              {latestRoom ? (
+                (() => {
+                  const closed =
+                    latestRoom.status === "closed" ||
+                    isExpired(latestRoom.expiresAt);
+                  return (
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${
+                        closed
+                          ? "bg-rose-50/10 text-rose-100 ring-rose-200/50"
+                          : "bg-emerald-50/10 text-emerald-100 ring-emerald-200/50"
+                      }`}
+                    >
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          closed ? "bg-rose-300" : "bg-emerald-300"
+                        }`}
+                      />
+                      {closed ? "마감됨" : "진행 중"}
+                    </span>
+                  );
+                })()
+              ) : (
+                <span>대기 중</span>
+              )}
             </div>
             {latestRoom ? (
               <>
@@ -58,13 +101,17 @@ export default async function Home() {
                   {latestRoom.title}
                 </p>
                 <p className="mt-1 text-xs text-sky-100/80">
+                  {latestRoom.teamId ? `${latestRoom.teamId} · ` : null}
+                  {formatDateTime(latestRoom.createdAt)
+                    ? `${formatDateTime(latestRoom.createdAt)} 생성 · `
+                    : null}
+                  {latestRoom.totalParticipants}명 참여
+                </p>
+                <p className="mt-1 text-[11px] text-sky-100/80">
                   {latestRoom.expiresAt
                     ? `${formatTime(latestRoom.expiresAt)} 마감 · `
                     : "마감 시간 없음 · "}
-                  {latestRoom.totalParticipants}명 참여 중
-                </p>
-                <p className="mt-1 text-[11px] text-sky-100/80">
-                  메뉴 후보 {latestRoom.totalCandidates}개가 등록돼 있어요.
+                  메뉴 후보 {latestRoom.totalCandidates}개
                 </p>
                 <Link
                   href={`/rooms/${latestRoom.id}`}
@@ -91,11 +138,11 @@ export default async function Home() {
             )}
           </div>
 
-          {/* 오늘의 메뉴 카드 */}
+          {/* 최근 메뉴 카드 */}
           <div className="flex flex-col justify-between rounded-xl bg-slate-900 px-4 py-4 text-slate-50 shadow-md">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
-                오늘의 메뉴
+                최근 메뉴
               </p>
               {latestResult ? (
                 <>
@@ -106,7 +153,8 @@ export default async function Home() {
                     {latestResult.votesCount}표 · 가장 많은 팀원이 선택했어요
                   </p>
                   <p className="mt-1 text-[11px] text-slate-400">
-                    {formatDate(latestResult.decidedAt)} 기준
+                    {latestResult.teamId ? `${latestResult.teamId} · ` : null}
+                    {formatDate(latestResult.decidedAt)} 확정
                   </p>
                 </>
               ) : (
@@ -115,7 +163,7 @@ export default async function Home() {
                     아직 확정된 메뉴가 없어요
                   </p>
                   <p className="mt-1 text-xs text-slate-300">
-                    투표를 마치고 결과를 확정하면, 여기에서 오늘의 메뉴를
+                    투표를 마치고 결과를 확정하면, 여기에서 최근 메뉴를
                     바로 확인할 수 있어요.
                   </p>
                 </>
@@ -124,7 +172,7 @@ export default async function Home() {
             <p className="mt-4 text-[11px] text-slate-300">
               {latestResult
                 ? "“오늘 팀 점심 메뉴는 이 카드에서 바로 확인하고, 결과 화면에서 한 줄 텍스트로 복사해 공유할 수 있어요.”"
-                : "“먼저 투표 방을 만들고 투표를 진행한 뒤, 결과 화면에서 오늘의 메뉴를 확정해 주세요.”"}
+                : "“먼저 투표 방을 만들고 투표를 진행한 뒤, 결과 화면에서 메뉴를 확정해 주세요.”"}
             </p>
           </div>
 

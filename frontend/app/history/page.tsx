@@ -1,4 +1,5 @@
 import { getRecentHistory } from "@/lib/server/history";
+import { TeamFilterForm } from "./TeamFilterForm";
 
 interface HistoryPageProps {
   searchParams?: Promise<{
@@ -54,14 +55,14 @@ export default async function HistoryPage(props: HistoryPageProps) {
 
       <section className="space-y-4">
         <div className="flex flex-col gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-[11px] text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:ring-slate-700 sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            기본적으로 가장 최근 기록부터 {limit ?? 10}개를 보여줘요. 팀 이름을
-            기준으로 필터링하고 싶다면 URL에{" "}
-            <code className="rounded bg-slate-900/90 px-1 py-0.5 font-mono text-[10px] text-slate-50">
-              ?teamId=디팀
-            </code>{" "}
-            처럼 쿼리 파라미터를 붙여서 사용할 수 있어요.
-          </p>
+          <div className="space-y-1.5">
+            <p>
+              기본적으로 가장 최근 기록부터 {limit ?? 10}개를 보여줘요. 아래 입력창에{" "}
+              <span className="font-semibold">팀 이름 일부</span>를 입력하면 해당 팀의
+              이력만 골라서 볼 수 있어요.
+            </p>
+            <TeamFilterForm />
+          </div>
           {hasTeamFilter ? (
             <p className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 text-[11px] font-medium text-slate-50 shadow-sm dark:bg-slate-50 dark:text-slate-900">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />

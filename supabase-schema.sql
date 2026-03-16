@@ -7,6 +7,8 @@ create table if not exists public.vote_rooms (
   title text not null,
   team_id text null,
   expires_at timestamptz null,
+  status text not null default 'open',
+  closed_at timestamptz null,
   created_at timestamptz not null default now()
 );
 
@@ -14,7 +16,13 @@ comment on table public.vote_rooms is '투표 방 (VoteRoom)';
 comment on column public.vote_rooms.id is '투표 방 ID';
 comment on column public.vote_rooms.team_id is '팀 ID (선택, 문자열로 보관)';
 comment on column public.vote_rooms.expires_at is '투표 마감 시간';
+comment on column public.vote_rooms.status is '투표 방 상태 (open/closed)';
+comment on column public.vote_rooms.closed_at is '종료 처리된 시각 (선택)';
 comment on column public.vote_rooms.created_at is '생성 시각';
+
+alter table public.vote_rooms
+  add constraint vote_rooms_status_check
+  check (status in ('open', 'closed'));
 
 -- 2) MenuCandidate: menu_candidates
 create table if not exists public.menu_candidates (

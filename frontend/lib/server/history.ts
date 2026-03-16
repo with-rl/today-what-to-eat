@@ -6,6 +6,17 @@ interface GetRecentHistoryOptions {
   limit?: number;
 }
 
+type RecentHistoryRow = {
+  id: string;
+  decided_at: string;
+  room_id: string;
+  menu_candidates?: { name?: string | null } | null;
+};
+
+function escapeLikePattern(input: string): string {
+  return input.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
+}
+
 export async function getRecentHistory(
   options: GetRecentHistoryOptions = {},
 ): Promise<HistoryItem[]> {
@@ -17,12 +28,13 @@ export async function getRecentHistory(
   const supabase = getSupabaseServerClient();
 
   if (teamId && teamId.trim().length > 0) {
+    const keyword = escapeLikePattern(teamId.trim());
     const { data, error } = await supabase
       .from("meal_history")
       .select(
         "id, decided_at, room_id, final_candidate_id, vote_rooms!inner(team_id), menu_candidates!inner(name)",
       )
-      .eq("vote_rooms.team_id", teamId.trim())
+      .ilike("vote_rooms.team_id", `%${keyword}%`)
       .order("decided_at", { ascending: false })
       .limit(limit);
 
@@ -30,7 +42,7 @@ export async function getRecentHistory(
       throw error ?? new Error("Failed to load meal history with team filter");
     }
 
-    return data.map((row: any) => ({
+    return (data as RecentHistoryRow[]).map((row) => ({
       id: row.id,
       decidedAt: row.decided_at,
       roomId: row.room_id,
@@ -48,7 +60,7 @@ export async function getRecentHistory(
     throw error ?? new Error("Failed to load meal history");
   }
 
-  return data.map((row: any) => ({
+  return (data as RecentHistoryRow[]).map((row) => ({
     id: row.id,
     decidedAt: row.decided_at,
     roomId: row.room_id,
