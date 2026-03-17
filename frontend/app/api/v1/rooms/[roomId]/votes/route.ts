@@ -2,13 +2,8 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { Vote, VoteSummary, VoteSummaryCandidate } from "@/lib/types/domain";
-
-function isExpired(expiresAt: string | null, now = new Date()): boolean {
-  if (!expiresAt) return false;
-  const expires = new Date(expiresAt);
-  if (Number.isNaN(expires.getTime())) return false;
-  return expires.getTime() <= now.getTime();
-}
+import { isUuid } from "@/lib/utils/uuid";
+import { isExpired } from "@/lib/utils/date";
 
 interface CreateVoteRequestBody {
   candidateId?: string;
@@ -31,7 +26,7 @@ export async function POST(
 ): Promise<NextResponse<CreateVoteResponseBody | { message: string }>> {
   const { roomId } = await params;
 
-  if (!roomId || typeof roomId !== "string") {
+  if (!isUuid(roomId)) {
     return NextResponse.json(
       { message: "유효한 방 ID가 필요합니다." },
       { status: 400 },
@@ -59,9 +54,10 @@ export async function POST(
         : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       cookieStore.set("voter_id", voterId, {
         httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 60 * 60 * 24 * 365, // 1 year
+        maxAge: 60 * 60 * 24 * 30, // 30 days
       });
     }
 
@@ -112,9 +108,6 @@ export async function POST(
         {
           message:
             "기존 투표를 정리하는 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.",
-          detail:
-            (deleteError as { message?: string } | null)?.message ??
-            "Unknown Supabase error while deleting previous vote",
         },
         { status: 500 },
       );
@@ -135,9 +128,6 @@ export async function POST(
         {
           message:
             "투표를 저장하는 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.",
-          detail:
-            (insertError as { message?: string } | null)?.message ??
-            "Unknown Supabase error while inserting vote",
         },
         { status: 500 },
       );
@@ -153,9 +143,6 @@ export async function POST(
         {
           message:
             "투표 집계를 불러오는 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.",
-          detail:
-            (votesError as { message?: string } | null)?.message ??
-            "Unknown Supabase error while loading votes",
         },
         { status: 500 },
       );

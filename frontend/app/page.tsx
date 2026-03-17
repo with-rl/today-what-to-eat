@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getHomeSummary } from "@/lib/server/home";
+import { isExpired } from "@/lib/utils/date";
 
 function formatTime(iso: string | null): string | null {
   if (!iso) return null;
@@ -66,7 +67,9 @@ export default async function Home() {
               <span>최근 투표</span>
               {latestRoom ? (
                 (() => {
-                  const closed = latestRoom.status === "closed";
+                  const closed =
+                    latestRoom.status === "closed" ||
+                    isExpired(latestRoom.expiresAt);
                   return (
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${

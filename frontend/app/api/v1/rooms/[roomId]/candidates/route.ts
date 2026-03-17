@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { MenuCandidate } from "@/lib/types/domain";
-
-function isExpired(expiresAt: string | null, now = new Date()): boolean {
-  if (!expiresAt) return false;
-  const expires = new Date(expiresAt);
-  if (Number.isNaN(expires.getTime())) return false;
-  return expires.getTime() <= now.getTime();
-}
+import { isUuid } from "@/lib/utils/uuid";
+import { isExpired } from "@/lib/utils/date";
 
 interface CreateCandidateRequestBody {
   name?: string;
@@ -30,7 +25,7 @@ export async function POST(
 ): Promise<NextResponse<CreateCandidateResponseBody | { message: string }>> {
   const { roomId } = await params;
 
-  if (!roomId || typeof roomId !== "string") {
+  if (!isUuid(roomId)) {
     return NextResponse.json(
       { message: "유효한 방 ID가 필요합니다." },
       { status: 400 },
