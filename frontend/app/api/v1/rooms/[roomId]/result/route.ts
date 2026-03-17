@@ -4,16 +4,16 @@ import type { RoomResult } from "@/lib/types/domain";
 import { isUuid } from "@/lib/utils/uuid";
 
 interface RoomParams {
-  params: Promise<{
+  params: {
     roomId: string;
-  }>;
+  };
 }
 
 export async function GET(
   _request: Request,
   { params }: RoomParams,
 ): Promise<NextResponse<RoomResult | { message: string }>> {
-  const { roomId } = await params;
+  const { roomId } = params;
 
   if (!isUuid(roomId)) {
     return NextResponse.json(

@@ -2,26 +2,24 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { MealHistory } from "@/lib/types/domain";
 import { isUuid } from "@/lib/utils/uuid";
-
-interface ConfirmResultRequestBody {
-  finalCandidateId?: string;
-}
+import { parseJsonBody } from "@/lib/utils/route";
+import { z } from "zod";
 
 interface ConfirmResultResponseBody {
   history: MealHistory;
 }
 
 interface RoomParams {
-  params: Promise<{
+  params: {
     roomId: string;
-  }>;
+  };
 }
 
 export async function POST(
   request: Request,
   { params }: RoomParams,
 ): Promise<NextResponse<ConfirmResultResponseBody | { message: string }>> {
-  const { roomId } = await params;
+  const { roomId } = params;
 
   if (!isUuid(roomId)) {
     return NextResponse.json(
@@ -31,11 +29,21 @@ export async function POST(
   }
 
   try {
-    const body = (await request.json()) as ConfirmResultRequestBody;
-    const rawFinalCandidateId =
-      typeof body.finalCandidateId === "string"
-        ? body.finalCandidateId.trim()
-        : "";
+    const parsed = await parseJsonBody(
+      request,
+      z.object({
+        finalCandidateId: z.preprocess(
+          (value) => (typeof value === "string" ? value : ""),
+          z.string().trim().min(1, "최종 선택된 메뉴 후보 ID가 필요합니다."),
+        ),
+      }),
+    );
+
+    if (!parsed.ok) {
+      return parsed.response;
+    }
+
+    const rawFinalCandidateId = parsed.data.finalCandidateId;
 
     if (!rawFinalCandidateId) {
       return NextResponse.json(

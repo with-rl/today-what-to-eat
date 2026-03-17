@@ -1,42 +1,11 @@
 import Link from "next/link";
 import { getHomeSummary } from "@/lib/server/home";
-import { isExpired } from "@/lib/utils/date";
-
-function formatTime(iso: string | null): string | null {
-  if (!iso) return null;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-
-  return new Intl.DateTimeFormat("ko-KR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Seoul",
-  }).format(date);
-}
-
-function formatDate(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-
-  return new Intl.DateTimeFormat("ko-KR", {
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
-}
-
-function formatDateTime(iso: string | null): string | null {
-  if (!iso) return null;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-
-  return new Intl.DateTimeFormat("ko-KR", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Seoul",
-  }).format(date);
-}
+import {
+  formatKoMonthDay,
+  formatKoMonthDayTime,
+  formatKoTime,
+  isExpired,
+} from "@/lib/utils/date";
 
 export default async function Home() {
   const { latestRoom, latestResult, recentHistory } = await getHomeSummary();
@@ -98,14 +67,14 @@ export default async function Home() {
                 </p>
                 <p className="mt-1 text-xs text-sky-100/80">
                   {latestRoom.teamId ? `${latestRoom.teamId} · ` : null}
-                  {formatDateTime(latestRoom.createdAt)
-                    ? `${formatDateTime(latestRoom.createdAt)} 생성 · `
+                  {formatKoMonthDayTime(latestRoom.createdAt)
+                    ? `${formatKoMonthDayTime(latestRoom.createdAt)} 생성 · `
                     : null}
                   {latestRoom.totalParticipants}명 참여
                 </p>
                 <p className="mt-1 text-[11px] text-sky-100/80">
                   {latestRoom.expiresAt
-                    ? `${formatTime(latestRoom.expiresAt)} 마감 · `
+                    ? `${formatKoTime(latestRoom.expiresAt)} 마감 · `
                     : "마감 시간 없음 · "}
                   메뉴 후보 {latestRoom.totalCandidates}개
                 </p>
@@ -150,7 +119,7 @@ export default async function Home() {
                   </p>
                   <p className="mt-1 text-[11px] text-slate-400">
                     {latestResult.teamId ? `${latestResult.teamId} · ` : null}
-                    {formatDate(latestResult.decidedAt)} 확정
+                    {formatKoMonthDay(latestResult.decidedAt)} 확정
                   </p>
                 </>
               ) : (
@@ -190,7 +159,7 @@ export default async function Home() {
                       className="flex items-center justify-between"
                     >
                       <span>
-                        {formatDate(item.decidedAt)} · {item.menuName}
+                        {formatKoMonthDay(item.decidedAt)} · {item.menuName}
                       </span>
                       <Link
                         href={`/rooms/${item.roomId}/result`}

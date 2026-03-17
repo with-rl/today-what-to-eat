@@ -7,6 +7,7 @@ import type {
   VoteSummary,
   VoteSummaryCandidate,
 } from "@/lib/types/domain";
+import { getErrorMessage } from "@/lib/utils/http";
 
 interface CandidatesSectionProps {
   roomId: string;
@@ -106,12 +107,11 @@ export function CandidatesSection({
       });
 
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
-          | { message?: string }
-          | null;
         setErrorMessage(
-          payload?.message ??
+          await getErrorMessage(
+            response,
             "투표에 실패했어요. 잠시 후 다시 시도해주세요.",
+          ),
         );
         setIsVoting(null);
         return;

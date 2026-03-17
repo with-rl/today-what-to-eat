@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { getErrorMessage } from "@/lib/utils/http";
 
 interface CreateRoomResponse {
   room: {
@@ -31,10 +32,8 @@ export default function CreateRoomPage() {
     setErrorMessage(null);
 
     try {
-      const expiresAtIso =
-        expiresAt && expiresAt.trim().length > 0
-          ? new Date(expiresAt).toISOString()
-          : null;
+      const rawExpiresAt =
+        expiresAt && expiresAt.trim().length > 0 ? expiresAt.trim() : null;
 
       const response = await fetch("/api/v1/rooms", {
         method: "POST",
@@ -44,17 +43,16 @@ export default function CreateRoomPage() {
         body: JSON.stringify({
           title: trimmedTitle,
           teamId: teamId.trim().length > 0 ? teamId.trim() : null,
-          expiresAt: expiresAtIso,
+          expiresAt: rawExpiresAt,
         }),
       });
 
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
-          | { message?: string }
-          | null;
         setErrorMessage(
-          payload?.message ??
+          await getErrorMessage(
+            response,
             "투표 방 생성에 실패했어요. 잠시 후 다시 시도해주세요.",
+          ),
         );
         setIsSubmitting(false);
         return;

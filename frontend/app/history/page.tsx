@@ -1,29 +1,17 @@
 import Link from "next/link";
 import { getRecentHistory } from "@/lib/server/history";
+import { formatKoYearMonthDay } from "@/lib/utils/date";
 import { TeamFilterForm } from "./TeamFilterForm";
 
 interface HistoryPageProps {
-  searchParams?: Promise<{
+  searchParams?: {
     teamId?: string;
     limit?: string;
-  }>;
-}
-
-function formatDate(dateIso: string): string {
-  const date = new Date(dateIso);
-  if (Number.isNaN(date.getTime())) {
-    return dateIso;
-  }
-
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
+  };
 }
 
 export default async function HistoryPage(props: HistoryPageProps) {
-  const resolvedSearchParams = (await props.searchParams) ?? {};
+  const resolvedSearchParams = props.searchParams ?? {};
   const limitParam = resolvedSearchParams.limit;
 
   let limit: number | undefined;
@@ -97,7 +85,7 @@ export default async function HistoryPage(props: HistoryPageProps) {
               >
                 <div className="space-y-0.5">
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                    {formatDate(item.decidedAt)}
+                    {formatKoYearMonthDay(item.decidedAt)}
                   </p>
                   <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
                     {item.menuName}

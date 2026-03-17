@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { VoteRoom } from "@/lib/types/domain";
+import { parseJsonBody } from "@/lib/utils/route";
+import { z } from "zod";
 
 interface CreateRoomRequestBody {
   title?: string;
@@ -12,19 +14,71 @@ interface CreateRoomResponseBody {
   room: VoteRoom;
 }
 
-export async function POST(request: Request): Promise<NextResponse<CreateRoomResponseBody | { message: string }>> {
-  try {
-    const body = (await request.json()) as CreateRoomRequestBody;
+function hasTimezoneDesignator(value: string): boolean {
+  // Examples: 2026-03-17T03:06:00.000Z, 2026-03-17T12:30:00+09:00, 2026-03-17T12:30:00-05:00
+  return /([zZ]|[+-]\d{2}:\d{2})$/.test(value);
+}
 
-    const rawTitle = typeof body.title === "string" ? body.title.trim() : "";
-    const rawTeamId =
-      typeof body.teamId === "string" && body.teamId.trim().length > 0
-        ? body.teamId.trim()
-        : null;
-    const rawExpiresAt =
-      typeof body.expiresAt === "string" && body.expiresAt.trim().length > 0
-        ? body.expiresAt.trim()
-        : null;
+function normalizeExpiresAtToUtcIso(rawExpiresAt: string): string | null {
+  const trimmed = rawExpiresAt.trim();
+  if (!trimmed) return null;
+
+  // If timezone is provided, trust it.
+  if (hasTimezoneDesignator(trimmed)) {
+    const parsed = new Date(trimmed);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+
+  // datetime-local (no timezone). Interpret as KST (+09:00).
+  // - "YYYY-MM-DDTHH:mm"      -> add ":00+09:00"
+  // - "YYYY-MM-DDTHH:mm:ss"   -> add "+09:00"
+  const kstSource = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(trimmed)
+    ? `${trimmed}:00+09:00`
+    : /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(trimmed)
+      ? `${trimmed}+09:00`
+      : `${trimmed}:00+09:00`;
+
+  const parsed = new Date(kstSource);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+export async function POST(
+  request: Request,
+): Promise<NextResponse<CreateRoomResponseBody | { message: string }>> {
+  try {
+    const parsed = await parseJsonBody(
+      request,
+      z.object({
+        title: z.preprocess(
+          (value) => (typeof value === "string" ? value : ""),
+          z.string().trim().min(1, "방 제목은 필수입니다."),
+        ),
+        teamId: z
+          .union([z.string(), z.null()])
+          .optional()
+          .transform((value) => {
+            if (value == null) return null;
+            const trimmed = value.trim();
+            return trimmed.length > 0 ? trimmed : null;
+          }),
+        expiresAt: z
+          .union([z.string(), z.null()])
+          .optional()
+          .transform((value) => {
+            if (value == null) return null;
+            const trimmed = value.trim();
+            return trimmed.length > 0 ? trimmed : null;
+          }),
+      }),
+    );
+
+    if (!parsed.ok) {
+      return parsed.response;
+    }
+
+    const rawTitle = parsed.data.title;
+    const rawTeamId = parsed.data.teamId ?? null;
+    const rawExpiresAt = parsed.data.expiresAt ?? null;
 
     if (!rawTitle) {
       return NextResponse.json(
@@ -33,24 +87,15 @@ export async function POST(request: Request): Promise<NextResponse<CreateRoomRes
       );
     }
 
-    let normalizedExpiresAt: string | null = null;
-    if (rawExpiresAt) {
-      // 브라우저에서 넘어오는 datetime-local 값(타임존 정보 없음)을 KST 기준으로 해석
-      // 이미 ISO 문자열(예: 2026-03-17T03:06:00.000Z)인 경우에는 그대로 사용하고,
-      // 그렇지 않은 경우에만 KST(+09:00) 오프셋을 붙여준다.
-      const kstIsoString = rawExpiresAt.endsWith("Z")
-        ? rawExpiresAt
-        : `${rawExpiresAt}:00+09:00`;
+    const normalizedExpiresAt = rawExpiresAt
+      ? normalizeExpiresAtToUtcIso(rawExpiresAt)
+      : null;
 
-      const parsed = new Date(kstIsoString);
-
-      if (Number.isNaN(parsed.getTime())) {
+    if (rawExpiresAt && !normalizedExpiresAt) {
         return NextResponse.json(
           { message: "유효한 마감 시간을 입력해주세요." },
           { status: 400 },
         );
-      }
-      normalizedExpiresAt = parsed.toISOString();
     }
 
     const supabase = getSupabaseServerClient();

@@ -3,27 +3,24 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { MenuCandidate } from "@/lib/types/domain";
 import { isUuid } from "@/lib/utils/uuid";
 import { isExpired } from "@/lib/utils/date";
-
-interface CreateCandidateRequestBody {
-  name?: string;
-  description?: string | null;
-}
+import { parseJsonBody } from "@/lib/utils/route";
+import { z } from "zod";
 
 interface CreateCandidateResponseBody {
   candidate: MenuCandidate;
 }
 
 interface RoomParams {
-  params: Promise<{
+  params: {
     roomId: string;
-  }>;
+  };
 }
 
 export async function POST(
   request: Request,
   { params }: RoomParams,
 ): Promise<NextResponse<CreateCandidateResponseBody | { message: string }>> {
-  const { roomId } = await params;
+  const { roomId } = params;
 
   if (!isUuid(roomId)) {
     return NextResponse.json(
@@ -33,13 +30,30 @@ export async function POST(
   }
 
   try {
-    const body = (await request.json()) as CreateCandidateRequestBody;
+    const parsed = await parseJsonBody(
+      request,
+      z.object({
+        name: z.preprocess(
+          (value) => (typeof value === "string" ? value : ""),
+          z.string().trim().min(1, "메뉴 이름은 필수입니다."),
+        ),
+        description: z
+          .union([z.string(), z.null()])
+          .optional()
+          .transform((value) => {
+            if (value == null) return null;
+            const trimmed = value.trim();
+            return trimmed.length > 0 ? trimmed : null;
+          }),
+      }),
+    );
 
-    const rawName = typeof body.name === "string" ? body.name.trim() : "";
-    const rawDescription =
-      typeof body.description === "string" && body.description.trim().length > 0
-        ? body.description.trim()
-        : null;
+    if (!parsed.ok) {
+      return parsed.response;
+    }
+
+    const rawName = parsed.data.name;
+    const rawDescription = parsed.data.description ?? null;
 
     if (!rawName) {
       return NextResponse.json(

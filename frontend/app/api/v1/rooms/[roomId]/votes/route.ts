@@ -4,10 +4,8 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { Vote, VoteSummary, VoteSummaryCandidate } from "@/lib/types/domain";
 import { isUuid } from "@/lib/utils/uuid";
 import { isExpired } from "@/lib/utils/date";
-
-interface CreateVoteRequestBody {
-  candidateId?: string;
-}
+import { parseJsonBody } from "@/lib/utils/route";
+import { z } from "zod";
 
 interface CreateVoteResponseBody {
   vote: Vote;
@@ -15,16 +13,16 @@ interface CreateVoteResponseBody {
 }
 
 interface RoomParams {
-  params: Promise<{
+  params: {
     roomId: string;
-  }>;
+  };
 }
 
 export async function POST(
   request: Request,
   { params }: RoomParams,
 ): Promise<NextResponse<CreateVoteResponseBody | { message: string }>> {
-  const { roomId } = await params;
+  const { roomId } = params;
 
   if (!isUuid(roomId)) {
     return NextResponse.json(
@@ -34,9 +32,21 @@ export async function POST(
   }
 
   try {
-    const body = (await request.json()) as CreateVoteRequestBody;
-    const rawCandidateId =
-      typeof body.candidateId === "string" ? body.candidateId.trim() : "";
+    const parsed = await parseJsonBody(
+      request,
+      z.object({
+        candidateId: z.preprocess(
+          (value) => (typeof value === "string" ? value : ""),
+          z.string().trim().min(1, "투표할 메뉴 후보 ID가 필요합니다."),
+        ),
+      }),
+    );
+
+    if (!parsed.ok) {
+      return parsed.response;
+    }
+
+    const rawCandidateId = parsed.data.candidateId;
 
     if (!rawCandidateId) {
       return NextResponse.json(
