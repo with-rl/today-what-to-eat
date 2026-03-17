@@ -69,6 +69,8 @@ export async function POST(request: Request): Promise<NextResponse<CreateRoomRes
       title: data.title,
       teamId: data.team_id,
       expiresAt: data.expires_at,
+      status: data.status ?? "open",
+      closedAt: data.closed_at ?? null,
       createdAt: data.created_at,
     };
 

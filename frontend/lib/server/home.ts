@@ -108,11 +108,39 @@ export async function getHomeSummary(): Promise<HomeSummary> {
       throw votesError;
     }
 
+    const rawVoteRooms = (historyRow as {
+      vote_rooms?:
+        | { team_id?: string | null }
+        | { team_id?: string | null }[]
+        | null;
+    }).vote_rooms;
+
+    const teamIdFromHistory =
+      rawVoteRooms == null
+        ? null
+        : Array.isArray(rawVoteRooms)
+        ? rawVoteRooms[0]?.team_id ?? null
+        : rawVoteRooms.team_id ?? null;
+
+    const rawMenuCandidates = (historyRow as {
+      menu_candidates?:
+        | { name?: string | null }
+        | { name?: string | null }[]
+        | null;
+    }).menu_candidates;
+
+    const menuNameFromHistory =
+      rawMenuCandidates == null
+        ? ""
+        : Array.isArray(rawMenuCandidates)
+        ? rawMenuCandidates[0]?.name ?? ""
+        : rawMenuCandidates.name ?? "";
+
     latestResult = {
       roomId: historyRow.room_id,
-      teamId: historyRow.vote_rooms?.team_id ?? null,
+      teamId: teamIdFromHistory,
       decidedAt: historyRow.decided_at,
-      menuName: historyRow.menu_candidates?.name ?? "",
+      menuName: menuNameFromHistory,
       votesCount: votesCount ?? 0,
     };
   }
