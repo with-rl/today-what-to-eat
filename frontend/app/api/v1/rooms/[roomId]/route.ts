@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRoomDetail } from "@/lib/server/rooms";
 import type { RoomDetail } from "@/lib/types/domain";
+import { isUuid } from "@/lib/utils/uuid";
 
 interface RoomDetailParams {
   params: Promise<{
@@ -14,7 +15,7 @@ export async function GET(
 ): Promise<NextResponse<RoomDetail | { message: string }>> {
   const { roomId } = await params;
 
-  if (!roomId || typeof roomId !== "string") {
+  if (!isUuid(roomId)) {
     return NextResponse.json(
       { message: "유효한 방 ID가 필요합니다." },
       { status: 400 },

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { MealHistory } from "@/lib/types/domain";
+import { isUuid } from "@/lib/utils/uuid";
 
 interface ConfirmResultRequestBody {
   finalCandidateId?: string;
@@ -22,7 +23,7 @@ export async function POST(
 ): Promise<NextResponse<ConfirmResultResponseBody | { message: string }>> {
   const { roomId } = await params;
 
-  if (!roomId || typeof roomId !== "string") {
+  if (!isUuid(roomId)) {
     return NextResponse.json(
       { message: "유효한 방 ID가 필요합니다." },
       { status: 400 },

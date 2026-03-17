@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getRecentHistory } from "@/lib/server/history";
 import { TeamFilterForm } from "./TeamFilterForm";
 
@@ -104,9 +105,12 @@ export default async function HistoryPage(props: HistoryPageProps) {
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   방 ID:{" "}
-                  <code className="rounded bg-slate-900/90 px-1 py-0.5 font-mono text-[10px] text-slate-50 dark:bg-slate-800">
+                  <Link
+                    href={`/rooms/${item.roomId}/result`}
+                    className="rounded bg-slate-900/90 px-1 py-0.5 font-mono text-[10px] text-slate-50 underline-offset-2 hover:underline dark:bg-slate-800"
+                  >
                     {item.roomId}
-                  </code>
+                  </Link>
                 </p>
               </li>
             ))}
