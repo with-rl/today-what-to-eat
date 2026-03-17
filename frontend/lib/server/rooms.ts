@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { isExpired } from "@/lib/utils/date";
 import type {
   CandidateWithVotes,
   RoomDetail,
@@ -18,13 +19,6 @@ type VoteRoomRow = {
   closed_at?: string | null;
   created_at: string;
 };
-
-function isExpired(expiresAt: string | null, now = new Date()): boolean {
-  if (!expiresAt) return false;
-  const expires = new Date(expiresAt);
-  if (Number.isNaN(expires.getTime())) return false;
-  return expires.getTime() <= now.getTime();
-}
 
 async function closeRoomIfExpired(
   supabase: ReturnType<typeof getSupabaseServerClient>,

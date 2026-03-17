@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getRoomResult, getRoomDetail } from "@/lib/server/rooms";
+import { isExpired } from "@/lib/utils/date";
 import { CopyShareButton } from "./CopyShareButton";
 
 interface RoomResultPageProps {
@@ -21,13 +22,6 @@ function formatDateTime(iso: string | null): string | null {
     minute: "2-digit",
     timeZone: "Asia/Seoul",
   }).format(date);
-}
-
-function isExpired(expiresAt: string | null, now = new Date()): boolean {
-  if (!expiresAt) return false;
-  const expires = new Date(expiresAt);
-  if (Number.isNaN(expires.getTime())) return false;
-  return expires.getTime() <= now.getTime();
 }
 
 export default async function RoomResultPage({

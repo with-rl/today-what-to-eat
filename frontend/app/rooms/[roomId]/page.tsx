@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getRoomDetail } from "@/lib/server/rooms";
 import type { CandidateWithVotes } from "@/lib/types/domain";
+import { isExpired } from "@/lib/utils/date";
 import { CandidatesSection } from "./CandidatesSection";
 import { AddCandidateForm } from "./AddCandidateForm";
 
@@ -27,13 +28,6 @@ function formatDateTime(iso: string | null): string | null {
 
 function getTotalVotes(candidates: CandidateWithVotes[]): number {
   return candidates.reduce((sum, candidate) => sum + candidate.votesCount, 0);
-}
-
-function isExpired(expiresAt: string | null, now = new Date()): boolean {
-  if (!expiresAt) return false;
-  const expires = new Date(expiresAt);
-  if (Number.isNaN(expires.getTime())) return false;
-  return expires.getTime() <= now.getTime();
 }
 
 export default async function RoomDetailPage({
