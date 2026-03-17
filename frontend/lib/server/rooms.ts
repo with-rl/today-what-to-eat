@@ -61,7 +61,7 @@ type MealHistoryRow = {
   decided_at: string;
 };
 
-async function ensureMealHistoryForClosedRoom(
+export async function ensureMealHistoryForClosedRoom(
   supabase: ReturnType<typeof getSupabaseServerClient>,
   roomId: string,
   finalCandidateId: string,

@@ -36,8 +36,14 @@ export async function POST(request: Request): Promise<NextResponse<CreateRoomRes
     let normalizedExpiresAt: string | null = null;
     if (rawExpiresAt) {
       // 브라우저에서 넘어오는 datetime-local 값(타임존 정보 없음)을 KST 기준으로 해석
-      const kstIsoString = `${rawExpiresAt}:00+09:00`;
+      // 이미 ISO 문자열(예: 2026-03-17T03:06:00.000Z)인 경우에는 그대로 사용하고,
+      // 그렇지 않은 경우에만 KST(+09:00) 오프셋을 붙여준다.
+      const kstIsoString = rawExpiresAt.endsWith("Z")
+        ? rawExpiresAt
+        : `${rawExpiresAt}:00+09:00`;
+
       const parsed = new Date(kstIsoString);
+
       if (Number.isNaN(parsed.getTime())) {
         return NextResponse.json(
           { message: "유효한 마감 시간을 입력해주세요." },

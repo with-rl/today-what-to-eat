@@ -1,6 +1,52 @@
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { HistoryItem } from "@/lib/types/domain";
+import { ensureMealHistoryForClosedRoom } from "./rooms";
 import { getRecentHistory } from "./history";
+
+type VoteRoomRow = {
+  id: string;
+  title: string;
+  team_id: string | null;
+  expires_at: string | null;
+  status?: string | null;
+  closed_at?: string | null;
+  created_at: string;
+};
+
+function isExpired(expiresAt: string | null, now = new Date()): boolean {
+  if (!expiresAt) return false;
+  const expires = new Date(expiresAt);
+  if (Number.isNaN(expires.getTime())) return false;
+  return expires.getTime() <= now.getTime();
+}
+
+async function closeRoomIfExpired(
+  supabase: ReturnType<typeof getSupabaseServerClient>,
+  roomRow: VoteRoomRow,
+): Promise<VoteRoomRow> {
+  const currentStatus = (roomRow.status ?? "open").toString();
+  if (currentStatus === "closed") {
+    return roomRow;
+  }
+
+  if (!isExpired(roomRow.expires_at)) {
+    return roomRow;
+  }
+
+  const { data: updatedRoom, error: updateError } = await supabase
+    .from("vote_rooms")
+    .update({ status: "closed", closed_at: new Date().toISOString() })
+    .eq("id", roomRow.id)
+    .eq("status", "open")
+    .select("*")
+    .maybeSingle();
+
+  if (updateError) {
+    throw updateError;
+  }
+
+  return (updatedRoom as VoteRoomRow | null) ?? roomRow;
+}
 
 export interface LatestRoomSummary {
   id: string;
@@ -46,36 +92,82 @@ export async function getHomeSummary(): Promise<HomeSummary> {
   }
 
   if (roomRow) {
-    const roomId = roomRow.id as string;
+    const normalizedRoomRow = await closeRoomIfExpired(
+      supabase,
+      roomRow as VoteRoomRow,
+    );
+
+    const roomId = normalizedRoomRow.id as string;
 
     const [{ data: candidateRows }, { data: voteRows }] = await Promise.all([
       supabase
         .from("menu_candidates")
-        .select("id")
+        .select("id, created_at")
         .eq("room_id", roomId),
       supabase
         .from("votes")
-        .select("voter_id")
+        .select("voter_id, candidate_id")
         .eq("room_id", roomId),
     ]);
 
     const totalCandidates = candidateRows?.length ?? 0;
     const participantIds = new Set<string>();
+    const voteCountByCandidateId = new Map<string, number>();
+
     (voteRows ?? []).forEach((row) => {
       const voterId = (row as { voter_id?: unknown } | null)?.voter_id;
+      const candidateId = (row as { candidate_id?: unknown } | null)?.candidate_id;
+
       if (typeof voterId === "string" && voterId.trim().length > 0) {
         participantIds.add(voterId);
       }
+
+      if (typeof candidateId === "string" && candidateId.trim().length > 0) {
+        voteCountByCandidateId.set(
+          candidateId,
+          (voteCountByCandidateId.get(candidateId) ?? 0) + 1,
+        );
+      }
     });
 
+    const status = (normalizedRoomRow.status ?? "open").toString();
+
+    if (status === "closed" && (candidateRows?.length ?? 0) > 0) {
+      const sortedByVotesAndCreatedAt = [...(candidateRows ?? [])].sort((a, b) => {
+        const aVotes = voteCountByCandidateId.get(a.id as string) ?? 0;
+        const bVotes = voteCountByCandidateId.get(b.id as string) ?? 0;
+
+        if (bVotes !== aVotes) {
+          return bVotes - aVotes;
+        }
+
+        const aCreated = new Date((a as { created_at: string }).created_at).getTime();
+        const bCreated = new Date((b as { created_at: string }).created_at).getTime();
+
+        return aCreated - bCreated;
+      });
+
+      const topCandidate = sortedByVotesAndCreatedAt[0];
+      const topVotes =
+        voteCountByCandidateId.get((topCandidate.id as string) ?? "") ?? 0;
+
+      if (topVotes > 0) {
+        await ensureMealHistoryForClosedRoom(
+          supabase,
+          normalizedRoomRow.id as string,
+          topCandidate.id as string,
+        );
+      }
+    }
+
     latestRoom = {
-      id: roomRow.id,
-      title: roomRow.title,
-      teamId: roomRow.team_id,
-      expiresAt: roomRow.expires_at,
-      status: roomRow.status ?? "open",
-      closedAt: roomRow.closed_at ?? null,
-      createdAt: roomRow.created_at,
+      id: normalizedRoomRow.id,
+      title: normalizedRoomRow.title,
+      teamId: normalizedRoomRow.team_id,
+      expiresAt: normalizedRoomRow.expires_at,
+      status: normalizedRoomRow.status ?? "open",
+      closedAt: normalizedRoomRow.closed_at ?? null,
+      createdAt: normalizedRoomRow.created_at,
       totalCandidates,
       totalParticipants: participantIds.size,
     };

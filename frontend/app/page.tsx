@@ -37,13 +37,6 @@ function formatDateTime(iso: string | null): string | null {
   }).format(date);
 }
 
-function isExpired(expiresAt: string | null, now = new Date()): boolean {
-  if (!expiresAt) return false;
-  const expires = new Date(expiresAt);
-  if (Number.isNaN(expires.getTime())) return false;
-  return expires.getTime() <= now.getTime();
-}
-
 export default async function Home() {
   const { latestRoom, latestResult, recentHistory } = await getHomeSummary();
 
@@ -73,9 +66,7 @@ export default async function Home() {
               <span>최근 투표</span>
               {latestRoom ? (
                 (() => {
-                  const closed =
-                    latestRoom.status === "closed" ||
-                    isExpired(latestRoom.expiresAt);
+                  const closed = latestRoom.status === "closed";
                   return (
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${
