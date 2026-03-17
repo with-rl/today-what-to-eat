@@ -9,6 +9,7 @@ function formatTime(iso: string | null): string | null {
   return new Intl.DateTimeFormat("ko-KR", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Asia/Seoul",
   }).format(date);
 }
 
@@ -32,6 +33,7 @@ function formatDateTime(iso: string | null): string | null {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Asia/Seoul",
   }).format(date);
 }
 
