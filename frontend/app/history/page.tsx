@@ -4,14 +4,14 @@ import { formatKoYearMonthDay } from "@/lib/utils/date";
 import { TeamFilterForm } from "./TeamFilterForm";
 
 interface HistoryPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     teamId?: string;
     limit?: string;
-  };
+  }>;
 }
 
 export default async function HistoryPage(props: HistoryPageProps) {
-  const resolvedSearchParams = props.searchParams ?? {};
+  const resolvedSearchParams = (await props.searchParams) ?? {};
   const limitParam = resolvedSearchParams.limit;
 
   let limit: number | undefined;
@@ -90,6 +90,11 @@ export default async function HistoryPage(props: HistoryPageProps) {
                   <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
                     {item.menuName}
                   </p>
+                  {item.teamId ? (
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      팀: {item.teamId}
+                    </p>
+                  ) : null}
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   방 ID:{" "}

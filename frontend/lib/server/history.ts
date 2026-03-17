@@ -11,10 +11,14 @@ type RecentHistoryRow = {
   decided_at: string;
   room_id: string;
   menu_candidates?: { name?: string | null } | null;
+  vote_rooms?: { team_id?: string | null } | { team_id?: string | null }[] | null;
 };
 
-function escapeLikePattern(input: string): string {
-  return input.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
+function getTeamIdFromRow(row: RecentHistoryRow): string | null {
+  const rawVoteRooms = row.vote_rooms;
+  if (rawVoteRooms == null) return null;
+  if (Array.isArray(rawVoteRooms)) return rawVoteRooms[0]?.team_id ?? null;
+  return rawVoteRooms.team_id ?? null;
 }
 
 export async function getRecentHistory(
@@ -28,7 +32,7 @@ export async function getRecentHistory(
   const supabase = getSupabaseServerClient();
 
   if (teamId && teamId.trim().length > 0) {
-    const keyword = escapeLikePattern(teamId.trim());
+    const keyword = teamId.trim();
     const { data, error } = await supabase
       .from("meal_history")
       .select(
@@ -46,13 +50,16 @@ export async function getRecentHistory(
       id: row.id,
       decidedAt: row.decided_at,
       roomId: row.room_id,
+      teamId: getTeamIdFromRow(row),
       menuName: row.menu_candidates?.name ?? "",
     }));
   }
 
   const { data, error } = await supabase
     .from("meal_history")
-    .select("id, decided_at, room_id, final_candidate_id, menu_candidates(name)")
+    .select(
+      "id, decided_at, room_id, final_candidate_id, vote_rooms(team_id), menu_candidates(name)",
+    )
     .order("decided_at", { ascending: false })
     .limit(limit);
 
@@ -64,6 +71,7 @@ export async function getRecentHistory(
     id: row.id,
     decidedAt: row.decided_at,
     roomId: row.room_id,
+    teamId: getTeamIdFromRow(row),
     menuName: row.menu_candidates?.name ?? "",
   }));
 }

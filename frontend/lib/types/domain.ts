@@ -87,6 +87,7 @@ export interface HistoryItem {
   id: UUID;
   decidedAt: string;
   roomId: UUID;
+  teamId: string | null;
   menuName: string;
 }
 

@@ -7,15 +7,15 @@ import { WinnerCard } from "./WinnerCard";
 import { CandidateBreakdown } from "./CandidateBreakdown";
 
 interface RoomResultPageProps {
-  params: {
+  params: Promise<{
     roomId: string;
-  };
+  }>;
 }
 
 export default async function RoomResultPage({
   params,
 }: RoomResultPageProps) {
-  const { roomId } = params;
+  const { roomId } = await params;
   const [detail, result] = await Promise.all([
     getRoomDetail(roomId),
     getRoomResult(roomId),

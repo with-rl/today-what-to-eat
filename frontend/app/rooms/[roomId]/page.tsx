@@ -7,15 +7,15 @@ import { CandidatesPanel } from "./CandidatesPanel";
 import { SuggestCandidatePanel } from "./SuggestCandidatePanel";
 
 interface RoomDetailPageProps {
-  params: {
+  params: Promise<{
     roomId: string;
-  };
+  }>;
 }
 
 export default async function RoomDetailPage({
   params,
 }: RoomDetailPageProps) {
-  const { roomId } = params;
+  const { roomId } = await params;
   const detail = await getRoomDetail(roomId);
 
   if (!detail) {

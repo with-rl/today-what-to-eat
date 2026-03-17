@@ -159,7 +159,10 @@ export default async function Home() {
                       className="flex items-center justify-between"
                     >
                       <span>
-                        {formatKoMonthDay(item.decidedAt)} · {item.menuName}
+                        {formatKoMonthDay(item.decidedAt)}
+                        {item.teamId ? ` · ${item.teamId}` : ""}
+                        {" · "}
+                        {item.menuName}
                       </span>
                       <Link
                         href={`/rooms/${item.roomId}/result`}
