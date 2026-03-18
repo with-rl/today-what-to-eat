@@ -20,6 +20,65 @@ type VoteRoomRow = {
   created_at: string;
 };
 
+type CandidateRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+};
+
+export function buildRoomResultCandidates(
+  candidateRows: CandidateRow[],
+  voteRows: { candidate_id: string }[],
+): {
+  candidates: RoomResultCandidate[];
+  winner: RoomResultWinner | null;
+} {
+  const voteCountByCandidateId = new Map<string, number>();
+  for (const vote of voteRows) {
+    const key = vote.candidate_id as string;
+    voteCountByCandidateId.set(key, (voteCountByCandidateId.get(key) ?? 0) + 1);
+  }
+
+  const candidates: RoomResultCandidate[] = candidateRows.map((candidate) => ({
+    candidateId: candidate.id,
+    name: candidate.name,
+    votesCount: voteCountByCandidateId.get(candidate.id) ?? 0,
+  }));
+
+  let winner: RoomResultWinner | null = null;
+
+  if (candidates.length > 0) {
+    const sortedByVotesAndCreatedAt = [...candidateRows].sort((a, b) => {
+      const aVotes = voteCountByCandidateId.get(a.id) ?? 0;
+      const bVotes = voteCountByCandidateId.get(b.id) ?? 0;
+
+      if (bVotes !== aVotes) {
+        return bVotes - aVotes;
+      }
+
+      const aCreated = new Date(a.created_at).getTime();
+      const bCreated = new Date(b.created_at).getTime();
+
+      return aCreated - bCreated;
+    });
+
+    const topCandidate = sortedByVotesAndCreatedAt[0];
+    const topVotes = voteCountByCandidateId.get(topCandidate.id) ?? 0;
+
+    if (topVotes > 0) {
+      winner = {
+        candidateId: topCandidate.id,
+        name: topCandidate.name,
+        description: topCandidate.description,
+        votesCount: topVotes,
+      };
+    }
+  }
+
+  return { candidates, winner };
+}
+
 async function closeRoomIfExpired(
   supabase: ReturnType<typeof getSupabaseServerClient>,
   roomRow: VoteRoomRow,
@@ -227,47 +286,10 @@ export async function getRoomResult(roomId: string): Promise<RoomResult | null> 
     throw votesError ?? new Error("Failed to load votes");
   }
 
-  const voteCountByCandidateId = new Map<string, number>();
-  for (const vote of voteRows) {
-    const key = vote.candidate_id as string;
-    voteCountByCandidateId.set(key, (voteCountByCandidateId.get(key) ?? 0) + 1);
-  }
-
-  const candidates: RoomResultCandidate[] = candidateRows.map((candidate) => ({
-    candidateId: candidate.id,
-    name: candidate.name,
-    votesCount: voteCountByCandidateId.get(candidate.id) ?? 0,
-  }));
-
-  let winner: RoomResultWinner | null = null;
-
-  if (candidates.length > 0) {
-    const sortedByVotesAndCreatedAt = [...candidateRows].sort((a, b) => {
-      const aVotes = voteCountByCandidateId.get(a.id) ?? 0;
-      const bVotes = voteCountByCandidateId.get(b.id) ?? 0;
-
-      if (bVotes !== aVotes) {
-        return bVotes - aVotes;
-      }
-
-      const aCreated = new Date(a.created_at).getTime();
-      const bCreated = new Date(b.created_at).getTime();
-
-      return aCreated - bCreated;
-    });
-
-    const topCandidate = sortedByVotesAndCreatedAt[0];
-    const topVotes = voteCountByCandidateId.get(topCandidate.id) ?? 0;
-
-    if (topVotes > 0) {
-      winner = {
-        candidateId: topCandidate.id,
-        name: topCandidate.name,
-        description: topCandidate.description,
-        votesCount: topVotes,
-      };
-    }
-  }
+  const { candidates, winner } = buildRoomResultCandidates(
+    candidateRows as CandidateRow[],
+    voteRows,
+  );
 
   const status = roomRow.status ?? "open";
   const isClosed = status === "closed" || isExpired(roomRow.expires_at);
